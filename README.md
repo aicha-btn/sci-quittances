@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# quittance-app
 
-## Getting Started
+MVP Next.js mobile-first pour gérer des biens, des locataires et générer des quittances de loyer PDF sans login visible.
 
-First, run the development server:
+## Architecture retenue
+
+- `app/` : 4 écrans maximum
+  - `/` génération
+  - `/biens`
+  - `/locataires`
+  - `/parametres`
+- `components/` : shell mobile, formulaires, cartes, aperçu PDF
+- `firebase/` : configuration Firebase web + auth anonyme invisible
+- `services/` : CRUD Firestore séparés
+- `hooks/` : abonnements temps réel Firestore
+- `pdf/` : document React PDF + helpers téléchargement / impression
+- `types/` : modèles TypeScript stricts
+- `validations/` : schémas Zod
+
+## Schéma Firestore exact
+
+### `landlord_settings/primary`
+
+- `companyName`
+- `addressLine1`
+- `addressLine2`
+- `postalCode`
+- `city`
+- `signatureLabel`
+- `createdAt`
+- `updatedAt`
+
+### `properties/{propertyId}`
+
+- `residenceName`
+- `addressLine1`
+- `addressLine2`
+- `postalCode`
+- `city`
+- `entryDate`
+- `technicalReference`
+- `baseRent`
+- `charges`
+- `createdAt`
+- `updatedAt`
+
+### `tenants/{tenantId}`
+
+- `propertyId`
+- `title`
+- `firstName`
+- `lastName`
+- `order`
+- `createdAt`
+- `updatedAt`
+
+## Installation
+
+```bash
+cd /Users/aicha/Documents/quittance-app
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+Application accessible ensuite sur [http://localhost:3000](http://localhost:3000).
+
+## Variables d'environnement attendues
+
+Renseigne les valeurs issues de ton projet Firebase web dans `.env.local` :
+
+```bash
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+```
+
+## Firebase à configurer
+
+1. Créer un projet Firebase.
+2. Activer `Authentication > Anonymous`.
+3. Créer une base `Cloud Firestore`.
+4. Coller les règles de [firestore.rules](/Users/aicha/Documents/quittance-app/firestore.rules).
+5. Ajouter l'application web Firebase et reporter les variables dans `.env.local`.
+
+## Commandes utiles
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## MVP inclus
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- CRUD biens
+- CRUD locataires
+- paramètres globaux bailleur
+- recherche simple
+- sélection mois / année
+- génération PDF à la volée
+- aperçu PDF intégré
+- téléchargement et impression
+- auth anonyme Firebase invisible
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Limites volontaires du MVP
 
-## Learn More
+- pas d'historique des quittances
+- pas de stockage des PDF
+- pas d'envoi email
+- pas de multi-utilisateur
+- pas de tableau de bord avancé
 
-To learn more about Next.js, take a look at the following resources:
+## Améliorations possibles ensuite
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- meilleure mise en page du PDF
+- App Check Firebase pour durcir l'accès
+- duplication d'impression par colocataire si besoin métier
+- préremplissage du bien le plus souvent utilisé

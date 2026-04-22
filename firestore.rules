@@ -1,0 +1,21 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    match /landlord_settings/{documentId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /properties/{propertyId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /tenants/{tenantId} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}
