@@ -2,20 +2,156 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isSignedIn() {
-      return request.auth != null;
+    function isOwner() {
+      return request.auth != null
+        && request.auth.uid == "site-owner"
+        && request.auth.token.app_role == "owner";
     }
 
-    match /landlord_settings/{documentId} {
-      allow read, write: if isSignedIn();
+    function requiredKeys(data, keys) {
+      return data.keys().hasAll(keys) && data.keys().hasOnly(keys);
+    }
+
+    function isShortString(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    function isFilledString(value, max) {
+      return value is string && value.size() > 0 && value.size() <= max;
+    }
+
+    function isFrenchPostalCode(value) {
+      return value is string && value.matches('^[0-9]{5}$');
+    }
+
+    function isPositiveAmount(value) {
+      return ((value is int) || (value is float)) && value >= 0;
+    }
+
+    function isTimestampField(value) {
+      return value is timestamp;
+    }
+
+    function isValidLandlordSettingsData(data) {
+      return requiredKeys(
+          data,
+          [
+            "companyName",
+            "addressLine1",
+            "addressLine2",
+            "postalCode",
+            "city",
+            "signatureLabel",
+            "createdAt",
+            "updatedAt",
+          ]
+        )
+        && isFilledString(data.companyName, 160)
+        && isFilledString(data.addressLine1, 160)
+        && isShortString(data.addressLine2, 160)
+        && isFrenchPostalCode(data.postalCode)
+        && isFilledString(data.city, 120)
+        && isFilledString(data.signatureLabel, 120)
+        && isTimestampField(data.createdAt)
+        && isTimestampField(data.updatedAt);
+    }
+
+    function isValidPropertyData(data) {
+      return requiredKeys(
+          data,
+          [
+            "residenceName",
+            "addressLine1",
+            "addressLine2",
+            "postalCode",
+            "city",
+            "entryDate",
+            "technicalReference",
+            "baseRent",
+            "charges",
+            "createdAt",
+            "updatedAt",
+          ]
+        )
+        && isShortString(data.residenceName, 160)
+        && isFilledString(data.addressLine1, 160)
+        && isShortString(data.addressLine2, 160)
+        && isFrenchPostalCode(data.postalCode)
+        && isFilledString(data.city, 120)
+        && data.entryDate is string
+        && data.entryDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && isFilledString(data.technicalReference, 120)
+        && isPositiveAmount(data.baseRent)
+        && isPositiveAmount(data.charges)
+        && isTimestampField(data.createdAt)
+        && isTimestampField(data.updatedAt);
+    }
+
+    function propertyExists(propertyId) {
+      return exists(/databases/$(database)/documents/properties/$(propertyId));
+    }
+
+    function isValidTenantData(data) {
+      return requiredKeys(
+          data,
+          [
+            "propertyId",
+            "title",
+            "firstName",
+            "lastName",
+            "order",
+            "createdAt",
+            "updatedAt",
+          ]
+        )
+        && isFilledString(data.propertyId, 128)
+        && propertyExists(data.propertyId)
+        && (data.title == "Monsieur" || data.title == "Madame")
+        && isFilledString(data.firstName, 80)
+        && isFilledString(data.lastName, 80)
+        && data.order is int
+        && data.order >= 1
+        && isTimestampField(data.createdAt)
+        && isTimestampField(data.updatedAt);
+    }
+
+    match /landlord_settings/primary {
+      allow read: if isOwner();
+      allow create: if isOwner()
+        && isValidLandlordSettingsData(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isOwner()
+        && isValidLandlordSettingsData(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
     }
 
     match /properties/{propertyId} {
-      allow read, write: if isSignedIn();
+      allow read: if isOwner();
+      allow create: if isOwner()
+        && isValidPropertyData(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isOwner()
+        && isValidPropertyData(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
     }
 
     match /tenants/{tenantId} {
-      allow read, write: if isSignedIn();
+      allow read: if isOwner();
+      allow create: if isOwner()
+        && isValidTenantData(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isOwner()
+        && isValidTenantData(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
     }
   }
 }

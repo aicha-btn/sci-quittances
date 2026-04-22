@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Manrope } from "next/font/google";
 
-import { AppShell } from "@/components/layout/app-shell";
-import { AppProvider } from "@/components/providers/app-provider";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -30,11 +28,7 @@ export default function RootLayout({
       lang="fr"
       className={`${manrope.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <AppProvider>
-          <AppShell>{children}</AppShell>
-        </AppProvider>
-      </body>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

@@ -6,7 +6,13 @@ import {
   useEffect,
   useState,
 } from "react"
-import { onAuthStateChanged, signInAnonymously } from "firebase/auth"
+import {
+  getIdTokenResult,
+  onAuthStateChanged,
+  signInWithCustomToken,
+  signOut,
+  type User,
+} from "firebase/auth"
 import { Toaster } from "sonner"
 
 import { auth, isFirebaseConfigured } from "@/firebase/config"
@@ -20,9 +26,7 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [authReady, setAuthReady] = useState(
-    !isFirebaseConfigured || Boolean(auth?.currentUser)
-  )
+  const [authReady, setAuthReady] = useState(!isFirebaseConfigured)
   const [authError, setAuthError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -32,8 +36,79 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
+    const activeAuth = firebaseAuth
+
     let cancelled = false
-    const currentHost = window.location.host
+    let ensureSessionPromise: Promise<void> | null = null
+
+    async function isOwnerUser(user: User) {
+      const tokenResult = await getIdTokenResult(user, true)
+
+      return (
+        user.uid === "site-owner" && tokenResult.claims.app_role === "owner"
+      )
+    }
+
+    async function fetchCustomToken() {
+      const response = await fetch("/api/firebase/token", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      })
+
+      if (response.status === 401) {
+        throw new Error(
+          "La session du site a expiré. Recharge la page et saisis à nouveau le mot de passe."
+        )
+      }
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null
+
+        throw new Error(
+          payload?.error ??
+            "Impossible de récupérer le jeton Firebase sécurisé."
+        )
+      }
+
+      const payload = (await response.json()) as { token?: string }
+
+      if (!payload.token) {
+        throw new Error("Le jeton Firebase sécurisé est manquant.")
+      }
+
+      return payload.token
+    }
+
+    async function ensureOwnerSession() {
+      if (ensureSessionPromise) {
+        return ensureSessionPromise
+      }
+
+      ensureSessionPromise = (async () => {
+        if (activeAuth.currentUser) {
+          const alreadyOwner = await isOwnerUser(activeAuth.currentUser).catch(
+            () => false
+          )
+
+          if (alreadyOwner) {
+            return
+          }
+
+          await signOut(activeAuth)
+        }
+
+        const customToken = await fetchCustomToken()
+        await signInWithCustomToken(activeAuth, customToken)
+      })().finally(() => {
+        ensureSessionPromise = null
+      })
+
+      return ensureSessionPromise
+    }
+
     const timeoutId = window.setTimeout(() => {
       if (cancelled) {
         return
@@ -44,53 +119,69 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return currentError
         }
 
-        if (currentHost.includes("ngrok")) {
-          return `Connexion Firebase trop longue sur ${currentHost}. Si tu testes via ngrok, ajoute ce domaine dans Firebase Authentication > Settings > Authorized domains et utilise l'URL HTTPS.`
-        }
-
-        return "Connexion Firebase trop longue. Recharge la page ou vérifie la configuration Authentication."
+        return "Connexion Firebase trop longue. Vérifie la session du site, Firebase Admin et les règles Firestore."
       })
     }, 8000)
 
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+    const unsubscribe = onAuthStateChanged(activeAuth, async (user) => {
       if (cancelled) {
         return
       }
 
-      if (user) {
+      if (!user) {
+        setAuthReady(false)
+        return
+      }
+
+      try {
+        const hasOwnerClaim = await isOwnerUser(user)
+
+        if (!hasOwnerClaim) {
+          await signOut(activeAuth)
+          return
+        }
+
         window.clearTimeout(timeoutId)
         setAuthError(null)
         setAuthReady(true)
-        return
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+
+        window.clearTimeout(timeoutId)
+        setAuthReady(false)
+        setAuthError(
+          error instanceof Error
+            ? error.message
+            : "La vérification Firebase sécurisée a échoué."
+        )
       }
     })
 
-    if (!firebaseAuth.currentUser) {
-      void (async () => {
+    void (async () => {
+      try {
+        await ensureOwnerSession()
+      } catch (error) {
         try {
-          await signInAnonymously(firebaseAuth)
-          if (cancelled) {
-            return
-          }
-
-          window.clearTimeout(timeoutId)
-          setAuthError(null)
-          setAuthReady(true)
-        } catch (error) {
-          if (cancelled) {
-            return
-          }
-
-          window.clearTimeout(timeoutId)
-          setAuthReady(false)
-          setAuthError(
-            error instanceof Error
-              ? error.message
-              : "La connexion anonyme Firebase a échoué."
-          )
+          await signOut(activeAuth)
+        } catch {
+          // No-op: a failed sign-out should not hide the real auth error.
         }
-      })()
-    }
+
+        if (cancelled) {
+          return
+        }
+
+        window.clearTimeout(timeoutId)
+        setAuthReady(false)
+        setAuthError(
+          error instanceof Error
+            ? error.message
+            : "La connexion Firebase sécurisée a échoué."
+        )
+      }
+    })()
 
     return () => {
       cancelled = true
