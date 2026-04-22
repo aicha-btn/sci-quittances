@@ -174,7 +174,7 @@ export function TenantsScreen({
                     </Select>
                   </div>
 
-                  <Button onClick={openCreateDialog} disabled={!selectedPropertyId}>
+                  <Button onClick={openCreateDialog} disabled={!activePropertyId}>
                     <Plus className="size-4" />
                     Ajouter un locataire
                   </Button>

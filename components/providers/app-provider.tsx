@@ -20,7 +20,9 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [authReady, setAuthReady] = useState(!isFirebaseConfigured)
+  const [authReady, setAuthReady] = useState(
+    !isFirebaseConfigured || Boolean(auth?.currentUser)
+  )
   const [authError, setAuthError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -30,8 +32,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
+    let cancelled = false
     const currentHost = window.location.host
     const timeoutId = window.setTimeout(() => {
+      if (cancelled) {
+        return
+      }
+
       setAuthError((currentError) => {
         if (currentError) {
           return currentError
@@ -45,31 +52,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
     }, 8000)
 
-    const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+      if (cancelled) {
+        return
+      }
+
       if (user) {
         window.clearTimeout(timeoutId)
         setAuthError(null)
         setAuthReady(true)
         return
       }
-
-      try {
-        await signInAnonymously(firebaseAuth)
-        window.clearTimeout(timeoutId)
-        setAuthError(null)
-        setAuthReady(true)
-      } catch (error) {
-        window.clearTimeout(timeoutId)
-        setAuthReady(false)
-        setAuthError(
-          error instanceof Error
-            ? error.message
-            : "La connexion anonyme Firebase a échoué."
-        )
-      }
     })
 
+    if (!firebaseAuth.currentUser) {
+      void (async () => {
+        try {
+          await signInAnonymously(firebaseAuth)
+          if (cancelled) {
+            return
+          }
+
+          window.clearTimeout(timeoutId)
+          setAuthError(null)
+          setAuthReady(true)
+        } catch (error) {
+          if (cancelled) {
+            return
+          }
+
+          window.clearTimeout(timeoutId)
+          setAuthReady(false)
+          setAuthError(
+            error instanceof Error
+              ? error.message
+              : "La connexion anonyme Firebase a échoué."
+          )
+        }
+      })()
+    }
+
     return () => {
+      cancelled = true
       window.clearTimeout(timeoutId)
       unsubscribe()
     }

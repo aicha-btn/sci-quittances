@@ -1,5 +1,10 @@
 import { getApp, getApps, initializeApp } from "firebase/app"
-import { getAuth } from "firebase/auth"
+import {
+  browserLocalPersistence,
+  getAuth,
+  indexedDBLocalPersistence,
+  initializeAuth,
+} from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
 
 const firebaseConfig = {
@@ -20,5 +25,15 @@ const app = isFirebaseConfigured
   : null
 
 export const firebaseApp = app
-export const auth = app ? getAuth(app) : null
+export const auth = app
+  ? (() => {
+      try {
+        return initializeAuth(app, {
+          persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+        })
+      } catch {
+        return getAuth(app)
+      }
+    })()
+  : null
 export const db = app ? getFirestore(app) : null

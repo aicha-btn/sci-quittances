@@ -239,6 +239,7 @@ export function GenerationScreen() {
           <PdfPreviewPanel
             previewUrl={previewUrl}
             isGenerating={isGenerating}
+            fileName={previewFileName}
             onDownload={() => downloadPdf(previewUrl, previewFileName)}
             onPrint={() => void printPdf(previewUrl)}
             onClose={() => {
