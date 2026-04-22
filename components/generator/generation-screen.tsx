@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Search, Settings2, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 
@@ -36,6 +36,7 @@ export function GenerationScreen() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewFileName, setPreviewFileName] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
+  const viewerAnchorRef = useRef<HTMLDivElement | null>(null)
   const { settings, error: settingsError } = useLandlordSettings()
   const { properties, error: propertiesError } = useProperties()
   const { tenants, error: tenantsError } = useTenants()
@@ -59,6 +60,21 @@ export function GenerationScreen() {
         URL.revokeObjectURL(previewUrl)
       }
     }
+  }, [previewUrl])
+
+  useEffect(() => {
+    if (!previewUrl || !viewerAnchorRef.current) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      viewerAnchorRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      })
+    }, 120)
+
+    return () => window.clearTimeout(timeoutId)
   }, [previewUrl])
 
   async function handleGenerate() {
@@ -240,6 +256,7 @@ export function GenerationScreen() {
             previewUrl={previewUrl}
             isGenerating={isGenerating}
             fileName={previewFileName}
+            viewerAnchorRef={viewerAnchorRef}
             onDownload={() => downloadPdf(previewUrl, previewFileName)}
             onPrint={() => void printPdf(previewUrl)}
             onClose={() => {

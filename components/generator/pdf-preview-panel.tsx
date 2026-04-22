@@ -30,6 +30,7 @@ interface PdfPreviewPanelProps {
   previewUrl: string
   isGenerating: boolean
   fileName: string
+  viewerAnchorRef?: React.RefObject<HTMLDivElement | null>
   onDownload: () => void
   onPrint: () => void
   onClose: () => void
@@ -39,6 +40,7 @@ export function PdfPreviewPanel({
   previewUrl,
   isGenerating,
   fileName,
+  viewerAnchorRef,
   onDownload,
   onPrint,
   onClose,
@@ -108,6 +110,7 @@ export function PdfPreviewPanel({
           </div>
         </CardHeader>
         <CardContent className="p-3 sm:p-4">
+          <div ref={viewerAnchorRef} className="scroll-mt-28" />
           <PdfZoomViewer
             key={`inline-${previewUrl}`}
             fileUrl={previewUrl}
