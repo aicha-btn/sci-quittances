@@ -148,7 +148,7 @@ export function TenantFormDialog({
               />
             </FormField>
 
-            <DialogFooter className="border-t bg-slate-50/80 px-0 pt-4">
+            <DialogFooter className="border-t bg-slate-50/80 px-5 py-4">
               <Button
                 type="button"
                 variant="outline"
