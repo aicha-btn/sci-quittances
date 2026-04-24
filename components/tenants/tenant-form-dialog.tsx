@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Controller, useForm } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 
 import { FormField } from "@/components/common/form-field"
 import { Button } from "@/components/ui/button"
@@ -46,12 +46,20 @@ export function TenantFormDialog({
     resolver: zodResolver(tenantFormSchema),
     defaultValues: {
       propertyId,
-      title: "Monsieur",
+      tenantType: "individual",
+      title: "",
+      companyName: "",
       firstName: "",
       lastName: "",
-      order: 1,
+      entryDate: "",
+      entryDateDetail: "",
     },
   })
+  const tenantType =
+    useWatch({
+      control: form.control,
+      name: "tenantType",
+    }) ?? "individual"
 
   useEffect(() => {
     if (!open) {
@@ -60,93 +68,155 @@ export function TenantFormDialog({
 
     form.reset({
       propertyId,
-      title: tenant?.title ?? "Monsieur",
+      tenantType: tenant?.tenantType ?? "individual",
+      title: tenant?.title ?? "",
+      companyName: tenant?.companyName ?? "",
       firstName: tenant?.firstName ?? "",
       lastName: tenant?.lastName ?? "",
-      order: tenant?.order ?? 1,
+      entryDate: tenant?.entryDate ?? "",
+      entryDateDetail: tenant?.entryDateDetail ?? "",
     })
   }, [form, open, propertyId, tenant])
 
   async function handleValidSubmit(values: TenantFormValues) {
-    await onSubmit(values)
+    await onSubmit({
+      ...values,
+      title: values.tenantType === "individual" ? values.title : "",
+      companyName:
+        values.tenantType === "company" ? values.companyName ?? "" : "",
+      firstName: values.tenantType === "individual" ? values.firstName : "",
+      lastName: values.tenantType === "individual" ? values.lastName : "",
+      entryDateDetail: values.entryDateDetail ?? "",
+    })
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100%-1rem)] rounded-[28px] p-0 sm:max-w-lg">
-        <div className="flex flex-col">
+      <DialogContent className="max-h-[92vh] max-w-[calc(100%-1rem)] overflow-hidden rounded-[28px] p-0 sm:max-w-lg">
+        <div className="flex max-h-[92vh] flex-col">
           <DialogHeader className="border-b px-5 py-4">
             <DialogTitle className="font-heading text-2xl">
               {tenant ? "Modifier le locataire" : "Nouveau locataire"}
             </DialogTitle>
             <DialogDescription>
-              L’ordre sert à garder un affichage stable en colocation.
+              Particulier ou société, avec date d&apos;entrée du locataire.
             </DialogDescription>
           </DialogHeader>
 
           <form
             onSubmit={form.handleSubmit(handleValidSubmit)}
-            className="space-y-4 px-5 py-5"
+            className="flex flex-1 flex-col"
           >
-            <Controller
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormField
-                  htmlFor="tenant-title"
-                  label="Civilité"
-                  required
-                  error={form.formState.errors.title?.message}
-                >
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="tenant-title" className="w-full">
-                      <SelectValue placeholder="Choisir" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Monsieur">Monsieur</SelectItem>
-                      <SelectItem value="Madame">Madame</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormField>
-              )}
-            />
-
-            <FormField
-              htmlFor="firstName"
-              label="Prénom"
-              required
-              error={form.formState.errors.firstName?.message}
-            >
-              <Input id="firstName" {...form.register("firstName")} />
-            </FormField>
-
-            <FormField
-              htmlFor="lastName"
-              label="Nom"
-              required
-              error={form.formState.errors.lastName?.message}
-            >
-              <Input id="lastName" {...form.register("lastName")} />
-            </FormField>
-
-            <FormField
-              htmlFor="order"
-              label="Ordre d'affichage"
-              required
-              error={form.formState.errors.order?.message}
-            >
-              <Input
-                id="order"
-                type="number"
-                min="1"
-                step="1"
-                inputMode="numeric"
-                {...form.register("order", {
-                  setValueAs: (value) =>
-                    value === "" ? Number.NaN : Number(value),
-                })}
+            <div className="space-y-4 overflow-y-auto px-5 py-5">
+              <Controller
+                control={form.control}
+                name="tenantType"
+                render={({ field }) => (
+                  <FormField
+                    htmlFor="tenant-type"
+                    label="Type de locataire"
+                    required
+                    error={form.formState.errors.tenantType?.message}
+                  >
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="tenant-type" className="w-full">
+                        <SelectValue placeholder="Choisir" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="individual">Particulier</SelectItem>
+                        <SelectItem value="company">Société</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                )}
               />
-            </FormField>
+
+              {tenantType === "company" ? (
+                <FormField
+                  htmlFor="companyName"
+                  label="Dénomination sociale"
+                  required
+                  error={form.formState.errors.companyName?.message}
+                >
+                  <Input
+                    id="companyName"
+                    placeholder="Ex. SCI Martin"
+                    {...form.register("companyName")}
+                  />
+                </FormField>
+              ) : null}
+
+              {tenantType === "individual" ? (
+                <>
+                  <Controller
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormField
+                        htmlFor="tenant-title"
+                        label="Civilité"
+                        required
+                        error={form.formState.errors.title?.message}
+                      >
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger id="tenant-title" className="w-full">
+                            <SelectValue placeholder="Choisir" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Monsieur">Monsieur</SelectItem>
+                            <SelectItem value="Madame">Madame</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                    )}
+                  />
+
+                  <FormField
+                    htmlFor="firstName"
+                    label="Prénom"
+                    required
+                    error={form.formState.errors.firstName?.message}
+                  >
+                    <Input id="firstName" {...form.register("firstName")} />
+                  </FormField>
+
+                  <FormField
+                    htmlFor="lastName"
+                    label="Nom"
+                    required
+                    error={form.formState.errors.lastName?.message}
+                  >
+                    <Input id="lastName" {...form.register("lastName")} />
+                  </FormField>
+                </>
+              ) : null}
+
+              <FormField
+                htmlFor="tenant-entryDate"
+                label="Date d'entrée"
+                required
+                error={form.formState.errors.entryDate?.message}
+              >
+                <Input
+                  id="tenant-entryDate"
+                  type="date"
+                  {...form.register("entryDate")}
+                />
+              </FormField>
+
+              <FormField
+                htmlFor="tenant-entryDateDetail"
+                label="Période d'entrée"
+                description="Optionnel, par exemple cours 2e trimestre 2019"
+                error={form.formState.errors.entryDateDetail?.message}
+              >
+                <Input
+                  id="tenant-entryDateDetail"
+                  placeholder="Ex. cours 2e trimestre 2019"
+                  {...form.register("entryDateDetail")}
+                />
+              </FormField>
+            </div>
 
             <DialogFooter className="border-t bg-slate-50/80 px-5 py-4">
               <Button

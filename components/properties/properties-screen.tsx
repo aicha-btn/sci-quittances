@@ -100,7 +100,7 @@ export function PropertiesScreen() {
       <div className="space-y-5">
         <PageHeader
           title="Biens"
-          description="Chaque bien porte le loyer, les charges et la référence technique commune."
+          description="Chaque bien porte l'adresse, l'IRL, le loyer et les charges communes."
           action={
             <Button size="lg" onClick={openCreateDialog}>
               <Plus className="size-4" />

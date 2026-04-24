@@ -40,8 +40,6 @@ MVP Next.js mobile-first pour gérer des biens, des locataires et générer des 
 - `addressLine2`
 - `postalCode`
 - `city`
-- `entryDate`
-- `entryDateDetail`
 - `technicalReference` (IRL actuellement affiché dans l'interface)
 - `baseRent`
 - `charges`
@@ -51,10 +49,13 @@ MVP Next.js mobile-first pour gérer des biens, des locataires et générer des 
 ### `tenants/{tenantId}`
 
 - `propertyId`
+- `tenantType`
 - `title`
+- `companyName`
 - `firstName`
 - `lastName`
-- `order`
+- `entryDate`
+- `entryDateDetail`
 - `createdAt`
 - `updatedAt`
 

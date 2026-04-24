@@ -30,7 +30,11 @@ import {
 } from "@/components/ui/select"
 import { useProperties } from "@/hooks/use-properties"
 import { useTenants } from "@/hooks/use-tenants"
-import { formatPropertyAddress, formatTenantName } from "@/lib/format"
+import {
+  formatPropertyAddress,
+  formatTenantEntryLabel,
+  formatTenantName,
+} from "@/lib/format"
 import { sortProperties, sortTenants } from "@/lib/receipt"
 import { createTenant, deleteTenant, updateTenant } from "@/services/tenants-service"
 import type { Tenant, TenantInput } from "@/types/domain"
@@ -217,7 +221,7 @@ export function TenantsScreen({
                           {formatTenantName(tenant, true)}
                         </h3>
                         <p className="text-sm text-slate-600">
-                          Ordre d’affichage: {tenant.order}
+                          Entrée: {formatTenantEntryLabel(tenant)}
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">

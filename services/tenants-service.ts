@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteField,
   deleteDoc,
   doc,
   onSnapshot,
@@ -12,13 +13,26 @@ import { ensureDb, timestampToDate } from "@/services/firestore-helpers"
 import type { Tenant, TenantInput } from "@/types/domain"
 
 function mapTenant(id: string, data: Record<string, unknown>): Tenant {
+  const firstName = String(data.firstName ?? "")
+  const lastName = String(data.lastName ?? "")
+  const companyName = String(data.companyName ?? data.identity ?? "")
+  const storedTenantType = String(data.tenantType ?? "")
+  const tenantType =
+    storedTenantType === "company" ||
+    (!storedTenantType && companyName.trim().length > 0 && !firstName && !lastName)
+      ? "company"
+      : "individual"
+
   return {
     id,
     propertyId: String(data.propertyId ?? ""),
-    title: (data.title as Tenant["title"]) ?? "Monsieur",
-    firstName: String(data.firstName ?? ""),
-    lastName: String(data.lastName ?? ""),
-    order: Number(data.order ?? 1),
+    tenantType,
+    title: (data.title as Tenant["title"]) ?? "",
+    companyName,
+    firstName,
+    lastName,
+    entryDate: String(data.entryDate ?? ""),
+    entryDateDetail: String(data.entryDateDetail ?? ""),
     createdAt: timestampToDate(data.createdAt),
     updatedAt: timestampToDate(data.updatedAt),
   }
@@ -48,9 +62,23 @@ export function subscribeTenants(
 
 export async function createTenant(input: TenantInput) {
   const firestore = ensureDb()
+  const normalizedInput =
+    input.tenantType === "company"
+      ? {
+          ...input,
+          title: "",
+          firstName: "",
+          lastName: "",
+          companyName: input.companyName ?? "",
+        }
+      : {
+          ...input,
+          companyName: "",
+        }
 
   await addDoc(collection(firestore, "tenants"), {
-    ...input,
+    ...normalizedInput,
+    entryDateDetail: normalizedInput.entryDateDetail ?? "",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
@@ -58,9 +86,25 @@ export async function createTenant(input: TenantInput) {
 
 export async function updateTenant(id: string, input: TenantInput) {
   const firestore = ensureDb()
+  const normalizedInput =
+    input.tenantType === "company"
+      ? {
+          ...input,
+          title: "",
+          firstName: "",
+          lastName: "",
+          companyName: input.companyName ?? "",
+        }
+      : {
+          ...input,
+          companyName: "",
+        }
 
   await updateDoc(doc(firestore, "tenants", id), {
-    ...input,
+    ...normalizedInput,
+    entryDateDetail: normalizedInput.entryDateDetail ?? "",
+    identity: deleteField(),
+    order: deleteField(),
     updatedAt: serverTimestamp(),
   })
 }

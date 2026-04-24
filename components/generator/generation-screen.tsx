@@ -172,7 +172,7 @@ export function GenerationScreen() {
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Rechercher un locataire, une adresse, une référence..."
+                  placeholder="Rechercher un locataire, une adresse ou un IRL..."
                   className="pl-9"
                 />
               </div>
@@ -236,7 +236,7 @@ export function GenerationScreen() {
           <EmptyState
             icon={Search}
             title="Aucun résultat"
-            description="Essaie avec un autre nom, une autre adresse ou la référence technique."
+            description="Essaie avec un autre nom, une autre adresse ou un autre IRL."
           />
         ) : (
           <div className="space-y-4">

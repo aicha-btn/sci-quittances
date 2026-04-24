@@ -1,4 +1,5 @@
-export type TenantTitle = "Monsieur" | "Madame"
+export type TenantTitle = "" | "Monsieur" | "Madame"
+export type TenantType = "individual" | "company"
 
 export interface LandlordSettings {
   id: string
@@ -24,8 +25,6 @@ export interface Property {
   addressLine2: string
   postalCode: string
   city: string
-  entryDate: string
-  entryDateDetail: string
   technicalReference: string
   baseRent: number
   charges: number
@@ -38,10 +37,13 @@ export type PropertyInput = Omit<Property, "id" | "createdAt" | "updatedAt">
 export interface Tenant {
   id: string
   propertyId: string
+  tenantType: TenantType
   title: TenantTitle
+  companyName: string
   firstName: string
   lastName: string
-  order: number
+  entryDate: string
+  entryDateDetail: string
   createdAt: Date | null
   updatedAt: Date | null
 }

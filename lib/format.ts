@@ -50,17 +50,63 @@ export function formatEntryDateLabel(
   return `${formattedDate} - ${cleanedDetail}`
 }
 
-export function formatTenantName(tenant: Tenant, includeTitle = false) {
-  const parts = [
-    includeTitle ? tenant.title : null,
-    tenant.firstName.trim(),
-    tenant.lastName.trim(),
-  ].filter(Boolean)
-
-  return parts.join(" ")
+export function formatTenantEntryLabel(
+  tenant: Pick<Tenant, "entryDate" | "entryDateDetail">
+) {
+  return formatEntryDateLabel(tenant.entryDate, tenant.entryDateDetail)
 }
 
-export function formatTenantGroup(tenants: Tenant[], includeTitle = false) {
+export function formatSharedTenantEntryLabel(
+  tenants: Array<Pick<Tenant, "entryDate" | "entryDateDetail"> | null | undefined>
+) {
+  const normalizedEntries = tenants
+    .map((tenant) => ({
+      entryDate: String(tenant?.entryDate ?? "").trim(),
+      entryDateDetail: String(tenant?.entryDateDetail ?? "").trim(),
+    }))
+    .filter((tenant) => tenant.entryDate || tenant.entryDateDetail)
+
+  if (normalizedEntries.length === 0) {
+    return "Non renseignée"
+  }
+
+  const [firstEntry] = normalizedEntries
+
+  return formatEntryDateLabel(firstEntry.entryDate, firstEntry.entryDateDetail)
+}
+
+export function formatTenantName(
+  tenant: Partial<Tenant> | null | undefined,
+  includeTitle = false
+) {
+  if (!tenant) {
+    return "Locataire"
+  }
+
+  const tenantType = tenant.tenantType ?? "individual"
+  const companyName = String(tenant.companyName ?? "")
+
+  if (tenantType === "company") {
+    return companyName.trim() || "Locataire"
+  }
+
+  const title = String(tenant.title ?? "")
+  const firstName = String(tenant.firstName ?? "")
+  const lastName = String(tenant.lastName ?? "")
+
+  const parts = [
+    includeTitle && title ? title : null,
+    firstName.trim(),
+    lastName.trim(),
+  ].filter(Boolean)
+
+  return parts.join(" ") || "Locataire"
+}
+
+export function formatTenantGroup(
+  tenants: Array<Partial<Tenant> | null | undefined>,
+  includeTitle = false
+) {
   return tenants.map((tenant) => formatTenantName(tenant, includeTitle)).join(" / ")
 }
 

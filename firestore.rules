@@ -65,8 +65,6 @@ service cloud.firestore {
             "addressLine2",
             "postalCode",
             "city",
-            "entryDate",
-            "entryDateDetail",
             "technicalReference",
             "baseRent",
             "charges",
@@ -79,9 +77,6 @@ service cloud.firestore {
         && isShortString(data.addressLine2, 160)
         && isFrenchPostalCode(data.postalCode)
         && isFilledString(data.city, 120)
-        && data.entryDate is string
-        && data.entryDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        && isShortString(data.entryDateDetail, 120)
         && isFilledString(data.technicalReference, 120)
         && isPositiveAmount(data.baseRent)
         && isPositiveAmount(data.charges)
@@ -98,21 +93,44 @@ service cloud.firestore {
           data,
           [
             "propertyId",
+            "tenantType",
             "title",
+            "companyName",
             "firstName",
             "lastName",
-            "order",
+            "entryDate",
+            "entryDateDetail",
             "createdAt",
             "updatedAt",
           ]
         )
         && isFilledString(data.propertyId, 128)
         && propertyExists(data.propertyId)
-        && (data.title == "Monsieur" || data.title == "Madame")
-        && isFilledString(data.firstName, 80)
-        && isFilledString(data.lastName, 80)
-        && data.order is int
-        && data.order >= 1
+        && (data.tenantType == "individual" || data.tenantType == "company")
+        && (data.title == "" || data.title == "Monsieur" || data.title == "Madame")
+        && isShortString(data.companyName, 160)
+        && isShortString(data.firstName, 80)
+        && isShortString(data.lastName, 80)
+        && data.entryDate is string
+        && data.entryDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && isShortString(data.entryDateDetail, 120)
+        && (
+          (
+            data.tenantType == "individual"
+            && (data.title == "Monsieur" || data.title == "Madame")
+            && isFilledString(data.firstName, 80)
+            && isFilledString(data.lastName, 80)
+            && data.companyName == ""
+          )
+          ||
+          (
+            data.tenantType == "company"
+            && data.title == ""
+            && isFilledString(data.companyName, 160)
+            && data.firstName == ""
+            && data.lastName == ""
+          )
+        )
         && isTimestampField(data.createdAt)
         && isTimestampField(data.updatedAt);
     }

@@ -3,17 +3,22 @@ import type { Property, PropertyWithTenants, Tenant } from "@/types/domain"
 
 export function sortTenants(tenants: Tenant[]) {
   return [...tenants].sort((left, right) => {
-    if (left.order !== right.order) {
-      return left.order - right.order
+    const leftLabel =
+      left.tenantType === "company"
+        ? left.companyName.trim()
+        : `${left.lastName} ${left.firstName}`.trim()
+    const rightLabel =
+      right.tenantType === "company"
+        ? right.companyName.trim()
+        : `${right.lastName} ${right.firstName}`.trim()
+
+    const labelComparison = leftLabel.localeCompare(rightLabel, "fr")
+
+    if (labelComparison !== 0) {
+      return labelComparison
     }
 
-    const lastNameComparison = left.lastName.localeCompare(right.lastName, "fr")
-
-    if (lastNameComparison !== 0) {
-      return lastNameComparison
-    }
-
-    return left.firstName.localeCompare(right.firstName, "fr")
+    return left.id.localeCompare(right.id, "fr")
   })
 }
 

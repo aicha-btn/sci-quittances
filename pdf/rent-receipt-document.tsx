@@ -8,8 +8,8 @@ import {
 
 import {
   formatCurrency,
-  formatEntryDateLabel,
   formatMonthYear,
+  formatSharedTenantEntryLabel,
   formatTenantGroup,
   getPropertyTotal,
 } from "@/lib/format"
@@ -76,6 +76,10 @@ const styles = StyleSheet.create({
   value: {
     flexGrow: 1,
   },
+  valueColumn: {
+    flexGrow: 1,
+    gap: 2,
+  },
   table: {
     borderWidth: 1,
     borderColor: "#cbd5e1",
@@ -116,6 +120,7 @@ const styles = StyleSheet.create({
 
 export function RentReceiptDocument({ data }: { data: ReceiptPdfData }) {
   const total = getPropertyTotal(data.property)
+  const sharedEntryLabel = formatSharedTenantEntryLabel(data.tenants)
 
   return (
     <Document title={`Quittance ${formatMonthYear(data.month, data.year)}`}>
@@ -139,7 +144,7 @@ export function RentReceiptDocument({ data }: { data: ReceiptPdfData }) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informations du logement</Text>
+          <Text style={styles.sectionTitle}>Informations de location</Text>
           <View style={styles.detailRow}>
             <Text style={styles.label}>Locataire(s)</Text>
             <Text style={styles.value}>
@@ -157,12 +162,7 @@ export function RentReceiptDocument({ data }: { data: ReceiptPdfData }) {
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.label}>Entrée dans le bien</Text>
-            <Text style={styles.value}>
-              {formatEntryDateLabel(
-                data.property.entryDate,
-                data.property.entryDateDetail
-              )}
-            </Text>
+            <Text style={styles.value}>{sharedEntryLabel}</Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.label}>Indice de référence des loyers (IRL)</Text>

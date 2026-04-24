@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate:tenant-entry-dates": "sh -c 'if [ -f .env.local ]; then node --env-file=.env.local scripts/migrate-entry-dates-to-tenants.mjs; else node --env-file=.env scripts/migrate-entry-dates-to-tenants.mjs; fi'"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
