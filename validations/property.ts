@@ -25,6 +25,12 @@ export const propertyFormSchema = z.object({
       (value) => !Number.isNaN(new Date(`${value}T00:00:00`).getTime()),
       "La date d'entrée est invalide"
     ),
+  entryDateDetail: z
+    .string()
+    .trim()
+    .max(120, "La précision d'entrée doit rester courte")
+    .optional()
+    .or(z.literal("")),
   technicalReference: z
     .string()
     .trim()

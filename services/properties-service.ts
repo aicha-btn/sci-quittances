@@ -23,6 +23,7 @@ function mapProperty(id: string, data: Record<string, unknown>): Property {
     postalCode: String(data.postalCode ?? ""),
     city: String(data.city ?? ""),
     entryDate: String(data.entryDate ?? ""),
+    entryDateDetail: String(data.entryDateDetail ?? ""),
     technicalReference: String(data.technicalReference ?? ""),
     baseRent: Number(data.baseRent ?? 0),
     charges: Number(data.charges ?? 0),
@@ -60,6 +61,7 @@ export async function createProperty(input: PropertyInput) {
     ...input,
     residenceName: input.residenceName ?? "",
     addressLine2: input.addressLine2 ?? "",
+    entryDateDetail: input.entryDateDetail ?? "",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
@@ -72,6 +74,7 @@ export async function updateProperty(id: string, input: PropertyInput) {
     ...input,
     residenceName: input.residenceName ?? "",
     addressLine2: input.addressLine2 ?? "",
+    entryDateDetail: input.entryDateDetail ?? "",
     updatedAt: serverTimestamp(),
   })
 }

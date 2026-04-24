@@ -36,6 +36,7 @@ const defaultValues: PropertyFormValues = {
   postalCode: "",
   city: "",
   entryDate: "",
+  entryDateDetail: "",
   technicalReference: "",
   baseRent: 0,
   charges: 0,
@@ -70,6 +71,7 @@ export function PropertyFormDialog({
       postalCode: property.postalCode,
       city: property.city,
       entryDate: property.entryDate,
+      entryDateDetail: property.entryDateDetail,
       technicalReference: property.technicalReference,
       baseRent: property.baseRent,
       charges: property.charges,
@@ -81,6 +83,7 @@ export function PropertyFormDialog({
       ...values,
       residenceName: values.residenceName ?? "",
       addressLine2: values.addressLine2 ?? "",
+      entryDateDetail: values.entryDateDetail ?? "",
     })
   }
 
@@ -93,7 +96,7 @@ export function PropertyFormDialog({
               {property ? "Modifier le bien" : "Nouveau bien"}
             </DialogTitle>
             <DialogDescription>
-              Adresse, référence technique, loyer et charges du bien.
+              Adresse, date d'entrée, IRL, loyer et charges du bien.
             </DialogDescription>
           </DialogHeader>
 
@@ -165,6 +168,19 @@ export function PropertyFormDialog({
                 error={form.formState.errors.entryDate?.message}
               >
                 <Input id="entryDate" type="date" {...form.register("entryDate")} />
+              </FormField>
+
+              <FormField
+                htmlFor="entryDateDetail"
+                label="Précision date d'entrée"
+                description="Optionnel, par exemple cours 2e trimestre 2019"
+                error={form.formState.errors.entryDateDetail?.message}
+              >
+                <Input
+                  id="entryDateDetail"
+                  placeholder="Ex. cours 2e trimestre 2019"
+                  {...form.register("entryDateDetail")}
+                />
               </FormField>
 
               <FormField

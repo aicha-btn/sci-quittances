@@ -36,6 +36,20 @@ export function formatDate(value: string | Date | null | undefined) {
   return dateFormatter.format(date)
 }
 
+export function formatEntryDateLabel(
+  entryDate: string | Date | null | undefined,
+  detail?: string | null
+) {
+  const formattedDate = formatDate(entryDate)
+  const cleanedDetail = detail?.trim()
+
+  if (!cleanedDetail) {
+    return formattedDate
+  }
+
+  return `${formattedDate} - ${cleanedDetail}`
+}
+
 export function formatTenantName(tenant: Tenant, includeTitle = false) {
   const parts = [
     includeTitle ? tenant.title : null,

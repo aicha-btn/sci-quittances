@@ -25,6 +25,7 @@ export interface Property {
   postalCode: string
   city: string
   entryDate: string
+  entryDateDetail: string
   technicalReference: string
   baseRent: number
   charges: number

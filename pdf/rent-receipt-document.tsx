@@ -6,7 +6,13 @@ import {
   View,
 } from "@react-pdf/renderer"
 
-import { formatCurrency, formatDate, formatMonthYear, formatTenantGroup, getPropertyTotal } from "@/lib/format"
+import {
+  formatCurrency,
+  formatEntryDateLabel,
+  formatMonthYear,
+  formatTenantGroup,
+  getPropertyTotal,
+} from "@/lib/format"
 import type { ReceiptPdfData } from "@/types/domain"
 
 const styles = StyleSheet.create({
@@ -151,7 +157,12 @@ export function RentReceiptDocument({ data }: { data: ReceiptPdfData }) {
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.label}>Entrée dans le bien</Text>
-            <Text style={styles.value}>{formatDate(data.property.entryDate)}</Text>
+            <Text style={styles.value}>
+              {formatEntryDateLabel(
+                data.property.entryDate,
+                data.property.entryDateDetail
+              )}
+            </Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.label}>Indice de référence des loyers (IRL)</Text>
