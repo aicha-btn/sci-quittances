@@ -96,7 +96,7 @@ export function PropertyFormDialog({
               {property ? "Modifier le bien" : "Nouveau bien"}
             </DialogTitle>
             <DialogDescription>
-              Adresse, date d'entrée, IRL, loyer et charges du bien.
+              Adresse, date d&apos;entrée, IRL, loyer et charges du bien.
             </DialogDescription>
           </DialogHeader>
 
