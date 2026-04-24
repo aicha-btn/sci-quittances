@@ -154,7 +154,7 @@ export function RentReceiptDocument({ data }: { data: ReceiptPdfData }) {
             <Text style={styles.value}>{formatDate(data.property.entryDate)}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.label}>Référence technique</Text>
+            <Text style={styles.label}>Indice de référence des loyers (IRL)</Text>
             <Text style={styles.value}>{data.property.technicalReference}</Text>
           </View>
         </View>

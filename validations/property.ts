@@ -28,7 +28,7 @@ export const propertyFormSchema = z.object({
   technicalReference: z
     .string()
     .trim()
-    .min(1, "La référence technique est obligatoire"),
+    .min(1, "L'IRL est obligatoire"),
   baseRent: amountField("loyer"),
   charges: amountField("charges"),
 })

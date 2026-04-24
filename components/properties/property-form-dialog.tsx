@@ -169,12 +169,14 @@ export function PropertyFormDialog({
 
               <FormField
                 htmlFor="technicalReference"
-                label="Référence technique"
+                label="IRL"
+                description="Indice de référence des loyers, par exemple 124,32"
                 required
                 error={form.formState.errors.technicalReference?.message}
               >
                 <Input
                   id="technicalReference"
+                  placeholder="Ex. 124,32"
                   {...form.register("technicalReference")}
                 />
               </FormField>

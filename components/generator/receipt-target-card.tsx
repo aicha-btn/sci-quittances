@@ -45,7 +45,7 @@ export function ReceiptTargetCard({
           <div className={cn("space-y-1 text-sm", selected ? "text-white/80" : "text-slate-600")}>
             {property.residenceName ? <p>{property.residenceName}</p> : null}
             <p>{formatPropertyAddress(property)}</p>
-            <p>Réf. {property.technicalReference}</p>
+            <p>IRL {property.technicalReference}</p>
           </div>
         </div>
 

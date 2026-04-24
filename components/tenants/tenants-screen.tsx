@@ -186,7 +186,7 @@ export function TenantsScreen({
                       {selectedProperty.residenceName || selectedProperty.addressLine1}
                     </p>
                     <p>{formatPropertyAddress(selectedProperty)}</p>
-                    <p>Réf. {selectedProperty.technicalReference}</p>
+                    <p>IRL {selectedProperty.technicalReference}</p>
                   </div>
                 ) : null}
               </CardContent>

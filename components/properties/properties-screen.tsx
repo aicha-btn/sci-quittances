@@ -149,7 +149,7 @@ export function PropertiesScreen() {
                         </h3>
                         <div className="space-y-1 text-sm text-slate-600">
                           <p>{formatPropertyAddress(property)}</p>
-                          <p>Réf. {property.technicalReference}</p>
+                          <p>IRL {property.technicalReference}</p>
                         </div>
                       </div>
                       <div className="rounded-[22px] bg-amber-50 px-4 py-3 text-right">
