@@ -2,6 +2,12 @@
 
 MVP Next.js mobile-first pour gérer des biens, des locataires et générer des quittances de loyer PDF, avec accès protégé par mot de passe et Firestore verrouillé sur une session propriétaire unique.
 
+## Contexte
+
+Projet réalisé en freelance pour un professionnel de l'immobilier.
+
+L'accès à l'application se fait uniquement par mot de passe. La démo publique n'est donc pas ouverte, car l'outil est utilisé dans un contexte métier réel par son utilisateur.
+
 ## Ce qui a été sécurisé
 
 - page de mot de passe avant d'entrer dans l'application
