@@ -5,6 +5,11 @@ import {
   isSiteSecurityConfigured,
   verifySitePassword,
 } from "@/lib/security/site-auth"
+import {
+  buildLoginRateLimitResponse,
+  evaluateLoginAttempt,
+  isLoginPasswordWithinLimit,
+} from "@/lib/security/login-rate-limit"
 
 export const runtime = "nodejs"
 
@@ -23,7 +28,17 @@ export async function POST(request: Request) {
     return NextResponse.redirect(loginUrl, { status: 303 })
   }
 
-  if (!verifySitePassword(password)) {
+  const loginAttempt = await evaluateLoginAttempt(
+    request,
+    () =>
+      isLoginPasswordWithinLimit(password) && verifySitePassword(password)
+  )
+
+  if (loginAttempt.status === "limited") {
+    return buildLoginRateLimitResponse(loginAttempt.retryAfterSeconds)
+  }
+
+  if (loginAttempt.status === "invalid") {
     loginUrl.searchParams.set("error", "invalid")
     return NextResponse.redirect(loginUrl, { status: 303 })
   }

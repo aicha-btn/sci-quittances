@@ -2,6 +2,7 @@ import "server-only"
 
 import { cert, getApp, getApps, initializeApp } from "firebase-admin/app"
 import { getAuth } from "firebase-admin/auth"
+import { getFirestore } from "firebase-admin/firestore"
 
 const firebaseAdminConfig = {
   projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
@@ -34,4 +35,8 @@ function getFirebaseAdminApp() {
 
 export function getFirebaseAdminAuth() {
   return getAuth(getFirebaseAdminApp())
+}
+
+export function getFirebaseAdminFirestore() {
+  return getFirestore(getFirebaseAdminApp())
 }
