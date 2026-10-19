@@ -10,6 +10,7 @@ import {
   UsersRound,
 } from "lucide-react"
 
+import { LogoutButton } from "@/components/auth/logout-button"
 import { cn } from "@/lib/utils"
 
 const navigationItems = [
@@ -118,11 +119,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </p>
                 </div>
               </div>
-              <div className="hidden rounded-[22px] bg-slate-950 px-4 py-3 text-right text-xs font-medium text-white shadow-lg sm:block">
-                Flow court
-                <br />
-                Mobile d’abord
-              </div>
+              <LogoutButton />
             </div>
           </div>
         </header>

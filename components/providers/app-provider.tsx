@@ -1,14 +1,11 @@
 "use client"
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
 import {
   getIdTokenResult,
+  inMemoryPersistence,
   onAuthStateChanged,
+  setPersistence,
   signInWithCustomToken,
   signOut,
   type User,
@@ -16,6 +13,7 @@ import {
 import { Toaster } from "sonner"
 
 import { auth, isFirebaseConfigured } from "@/firebase/config"
+import { isSiteSessionExpired } from "@/lib/security/session-expiration"
 
 interface AppContextValue {
   isConfigured: boolean
@@ -23,11 +21,21 @@ interface AppContextValue {
   authError: string | null
 }
 
+type FirebaseTokenPayload = {
+  token?: string
+  sessionExpiresAt?: number
+}
+
+class SiteSessionExpiredError extends Error {}
+
 const AppContext = createContext<AppContextValue | null>(null)
+const SESSION_CHECK_INTERVAL_MS = 60_000
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [authReady, setAuthReady] = useState(!isFirebaseConfigured)
   const [authError, setAuthError] = useState<string | null>(null)
+  const sessionExpiresAtRef = useRef<number | null>(null)
+  const redirectingRef = useRef(false)
 
   useEffect(() => {
     const firebaseAuth = auth
@@ -37,9 +45,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     const activeAuth = firebaseAuth
-
     let cancelled = false
-    let ensureSessionPromise: Promise<void> | null = null
+    let unsubscribeAuth = () => {}
 
     async function isOwnerUser(user: User) {
       const tokenResult = await getIdTokenResult(user, true)
@@ -47,6 +54,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return (
         user.uid === "site-owner" && tokenResult.claims.app_role === "owner"
       )
+    }
+
+    async function redirectToLogin() {
+      if (redirectingRef.current) {
+        return
+      }
+
+      redirectingRef.current = true
+      sessionExpiresAtRef.current = null
+      setAuthReady(false)
+      setAuthError(null)
+
+      try {
+        await signOut(activeAuth)
+      } catch {
+        // Hard navigation below still clears the in-memory Firebase session.
+      } finally {
+        window.location.replace("/login")
+      }
     }
 
     async function fetchCustomToken() {
@@ -57,116 +83,97 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (response.status === 401) {
-        throw new Error(
-          "La session du site a expiré. Recharge la page et saisis à nouveau le mot de passe."
-        )
+        throw new SiteSessionExpiredError()
       }
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | { error?: string }
-          | null
-
-        throw new Error(
-          payload?.error ??
-            "Impossible de récupérer le jeton Firebase sécurisé."
-        )
+        throw new Error("Impossible d’établir la session sécurisée.")
       }
 
-      const payload = (await response.json()) as { token?: string }
+      const payload = (await response.json()) as FirebaseTokenPayload
 
-      if (!payload.token) {
-        throw new Error("Le jeton Firebase sécurisé est manquant.")
+      if (
+        !payload.token ||
+        typeof payload.sessionExpiresAt !== "number" ||
+        !Number.isFinite(payload.sessionExpiresAt)
+      ) {
+        throw new Error("La réponse de session sécurisée est invalide.")
       }
 
-      return payload.token
+      return {
+        token: payload.token,
+        sessionExpiresAt: payload.sessionExpiresAt,
+      }
     }
 
-    async function ensureOwnerSession() {
-      if (ensureSessionPromise) {
-        return ensureSessionPromise
+    const checkSessionExpiration = () => {
+      if (isSiteSessionExpired(sessionExpiresAtRef.current)) {
+        void redirectToLogin()
       }
+    }
 
-      ensureSessionPromise = (async () => {
-        if (activeAuth.currentUser) {
-          const alreadyOwner = await isOwnerUser(activeAuth.currentUser).catch(
-            () => false
-          )
-
-          if (alreadyOwner) {
-            return
-          }
-
-          await signOut(activeAuth)
-        }
-
-        const customToken = await fetchCustomToken()
-        await signInWithCustomToken(activeAuth, customToken)
-      })().finally(() => {
-        ensureSessionPromise = null
-      })
-
-      return ensureSessionPromise
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        checkSessionExpiration()
+      }
     }
 
     const timeoutId = window.setTimeout(() => {
-      if (cancelled) {
-        return
+      if (!cancelled && !redirectingRef.current) {
+        setAuthError(
+          "Connexion Firebase trop longue. Vérifie ta connexion puis réessaie."
+        )
       }
+    }, 8000)
+    const intervalId = window.setInterval(
+      checkSessionExpiration,
+      SESSION_CHECK_INTERVAL_MS
+    )
 
-      setAuthError((currentError) => {
-        if (currentError) {
-          return currentError
+    window.addEventListener("focus", checkSessionExpiration)
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    void (async () => {
+      try {
+        await setPersistence(activeAuth, inMemoryPersistence)
+
+        const { token, sessionExpiresAt } = await fetchCustomToken()
+
+        if (isSiteSessionExpired(sessionExpiresAt)) {
+          throw new SiteSessionExpiredError()
         }
 
-        return "Connexion Firebase trop longue. Vérifie la session du site, Firebase Admin et les règles Firestore."
-      })
-    }, 8000)
-
-    const unsubscribe = onAuthStateChanged(activeAuth, async (user) => {
-      if (cancelled) {
-        return
-      }
-
-      if (!user) {
-        setAuthReady(false)
-        return
-      }
-
-      try {
-        const hasOwnerClaim = await isOwnerUser(user)
+        const credential = await signInWithCustomToken(activeAuth, token)
+        const hasOwnerClaim = await isOwnerUser(credential.user)
 
         if (!hasOwnerClaim) {
-          await signOut(activeAuth)
-          return
+          throw new Error("La session Firebase n’est pas autorisée.")
         }
 
-        window.clearTimeout(timeoutId)
-        setAuthError(null)
-        setAuthReady(true)
-      } catch (error) {
         if (cancelled) {
           return
         }
 
+        sessionExpiresAtRef.current = sessionExpiresAt
         window.clearTimeout(timeoutId)
-        setAuthReady(false)
-        setAuthError(
-          error instanceof Error
-            ? error.message
-            : "La vérification Firebase sécurisée a échoué."
-        )
-      }
-    })
+        setAuthError(null)
+        setAuthReady(true)
 
-    void (async () => {
-      try {
-        await ensureOwnerSession()
+        unsubscribeAuth = onAuthStateChanged(activeAuth, (user) => {
+          if (!cancelled && !user && !redirectingRef.current) {
+            setAuthReady(false)
+          }
+        })
       } catch (error) {
+        if (error instanceof SiteSessionExpiredError) {
+          await redirectToLogin()
+          return
+        }
+
         try {
           await signOut(activeAuth)
         } catch {
-          // No-op: a failed sign-out should not hide the real auth error.
+          // Preserve the original, generic authentication error.
         }
 
         if (cancelled) {
@@ -185,8 +192,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true
+      sessionExpiresAtRef.current = null
       window.clearTimeout(timeoutId)
-      unsubscribe()
+      window.clearInterval(intervalId)
+      window.removeEventListener("focus", checkSessionExpiration)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      unsubscribeAuth()
     }
   }, [])
 

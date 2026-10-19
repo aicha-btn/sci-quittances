@@ -1,8 +1,7 @@
 import { getApp, getApps, initializeApp } from "firebase/app"
 import {
-  browserLocalPersistence,
   getAuth,
-  indexedDBLocalPersistence,
+  inMemoryPersistence,
   initializeAuth,
 } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
@@ -29,7 +28,7 @@ export const auth = app
   ? (() => {
       try {
         return initializeAuth(app, {
-          persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+          persistence: inMemoryPersistence,
         })
       } catch {
         return getAuth(app)

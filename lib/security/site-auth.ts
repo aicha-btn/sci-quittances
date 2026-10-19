@@ -7,7 +7,7 @@ export const SITE_SESSION_COOKIE_NAME = "quittance_site_session"
 
 const SESSION_TTL_DAYS = 30
 
-type SiteSessionPayload = {
+export type SiteSessionPayload = {
   role: "owner"
   exp: number
 }
@@ -64,8 +64,9 @@ function decodePayload(value: string) {
   }
 }
 
-function createSessionToken() {
-  const expiresAt = Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000
+export function createSiteSessionToken(
+  expiresAt = Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000
+) {
   const payload: SiteSessionPayload = {
     role: "owner",
     exp: expiresAt,
@@ -78,12 +79,21 @@ function createSessionToken() {
   }
 }
 
-function verifySessionToken(token: string | undefined) {
+export function verifySiteSessionToken(
+  token: string | undefined,
+  now = Date.now()
+) {
   if (!token) {
     return null
   }
 
-  const [encodedPayload, signature] = token.split(".")
+  const tokenParts = token.split(".")
+
+  if (tokenParts.length !== 2) {
+    return null
+  }
+
+  const [encodedPayload, signature] = tokenParts
 
   if (!encodedPayload || !signature) {
     return null
@@ -102,7 +112,7 @@ function verifySessionToken(token: string | undefined) {
 
   const payload = decodePayload(encodedPayload)
 
-  if (!payload || payload.role !== "owner" || payload.exp <= Date.now()) {
+  if (!payload || payload.role !== "owner" || payload.exp <= now) {
     return null
   }
 
@@ -110,7 +120,7 @@ function verifySessionToken(token: string | undefined) {
 }
 
 export function buildSessionCookie() {
-  const { token, expiresAt } = createSessionToken()
+  const { token, expiresAt } = createSiteSessionToken()
 
   return {
     name: SITE_SESSION_COOKIE_NAME,
@@ -125,9 +135,24 @@ export function buildSessionCookie() {
   }
 }
 
+export function buildExpiredSessionCookie() {
+  return {
+    name: SITE_SESSION_COOKIE_NAME,
+    value: "",
+    options: {
+      httpOnly: true,
+      sameSite: "lax" as const,
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 0,
+      expires: new Date(0),
+    },
+  }
+}
+
 export async function getSiteSession() {
   const cookieStore = await cookies()
   const cookie = cookieStore.get(SITE_SESSION_COOKIE_NAME)
 
-  return verifySessionToken(cookie?.value)
+  return verifySiteSessionToken(cookie?.value)
 }
