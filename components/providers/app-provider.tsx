@@ -3,16 +3,15 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react"
 import {
   getIdTokenResult,
-  inMemoryPersistence,
   onAuthStateChanged,
-  setPersistence,
   signInWithCustomToken,
   signOut,
+  type Auth,
   type User,
 } from "firebase/auth"
 import { Toaster } from "sonner"
 
-import { auth, isFirebaseConfigured } from "@/firebase/config"
+import { getFirebaseAuth, isFirebaseConfigured } from "@/firebase/config"
 import { isSiteSessionExpired } from "@/lib/security/session-expiration"
 
 interface AppContextValue {
@@ -38,13 +37,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const redirectingRef = useRef(false)
 
   useEffect(() => {
-    const firebaseAuth = auth
-
-    if (!isFirebaseConfigured || !firebaseAuth) {
+    if (!isFirebaseConfigured) {
       return
     }
 
-    const activeAuth = firebaseAuth
+    let activeAuth: Auth | null = null
     let cancelled = false
     let unsubscribeAuth = () => {}
 
@@ -67,7 +64,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setAuthError(null)
 
       try {
-        await signOut(activeAuth)
+        if (activeAuth) {
+          await signOut(activeAuth)
+        }
       } catch {
         // Hard navigation below still clears the in-memory Firebase session.
       } finally {
@@ -135,7 +134,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     void (async () => {
       try {
-        await setPersistence(activeAuth, inMemoryPersistence)
+        activeAuth = await getFirebaseAuth()
+
+        if (!activeAuth) {
+          throw new Error("Firebase Auth is unavailable.")
+        }
+
+        if (cancelled) {
+          return
+        }
 
         const { token, sessionExpiresAt } = await fetchCustomToken()
 
@@ -171,7 +178,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
 
         try {
-          await signOut(activeAuth)
+          if (activeAuth) {
+            await signOut(activeAuth)
+          }
         } catch {
           // Preserve the original, generic authentication error.
         }
@@ -182,11 +191,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         window.clearTimeout(timeoutId)
         setAuthReady(false)
-        setAuthError(
-          error instanceof Error
-            ? error.message
-            : "La connexion Firebase sécurisée a échoué."
-        )
+        setAuthError("La connexion Firebase sécurisée a échoué.")
       }
     })()
 

@@ -1,10 +1,20 @@
-import { getApp, getApps, initializeApp } from "firebase/app"
+import { FirebaseError, getApp, getApps, initializeApp } from "firebase/app"
 import {
   getAuth,
+  indexedDBLocalPersistence,
   inMemoryPersistence,
   initializeAuth,
+  setPersistence,
+  signOut,
+  type Auth,
+  type Persistence,
 } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
+
+import {
+  bootstrapFirebaseAuthPersistence,
+  FIREBASE_AUTH_MEMORY_MIGRATION_KEY,
+} from "@/lib/security/firebase-auth-persistence"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -24,15 +34,51 @@ const app = isFirebaseConfigured
   : null
 
 export const firebaseApp = app
-export const auth = app
-  ? (() => {
-      try {
-        return initializeAuth(app, {
-          persistence: inMemoryPersistence,
-        })
-      } catch {
-        return getAuth(app)
-      }
-    })()
-  : null
 export const db = app ? getFirestore(app) : null
+
+let authBootstrapPromise: Promise<Auth | null> | null = null
+
+function initializeClientAuth(persistence: Persistence) {
+  if (!app) {
+    throw new Error("Firebase is not configured.")
+  }
+
+  try {
+    return initializeAuth(app, { persistence })
+  } catch (error) {
+    if (
+      error instanceof FirebaseError &&
+      error.code === "auth/already-initialized"
+    ) {
+      return getAuth(app)
+    }
+
+    throw error
+  }
+}
+
+export async function getFirebaseAuth() {
+  if (!app || typeof window === "undefined") {
+    return Promise.resolve(null)
+  }
+
+  if (!authBootstrapPromise) {
+    authBootstrapPromise = bootstrapFirebaseAuthPersistence({
+      migrationComplete:
+        window.localStorage.getItem(FIREBASE_AUTH_MEMORY_MIGRATION_KEY) === "1",
+      initializeLegacyAuth: () =>
+        initializeClientAuth(indexedDBLocalPersistence),
+      initializeMemoryAuth: () => initializeClientAuth(inMemoryPersistence),
+      waitForInitialAuthState: (auth) => auth.authStateReady(),
+      signOut,
+      setMemoryPersistence: (auth) =>
+        setPersistence(auth, inMemoryPersistence),
+      getCurrentUser: (auth) => auth.currentUser,
+      markMigrationComplete: () => {
+        window.localStorage.setItem(FIREBASE_AUTH_MEMORY_MIGRATION_KEY, "1")
+      },
+    })
+  }
+
+  return authBootstrapPromise
+}

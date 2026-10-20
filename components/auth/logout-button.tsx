@@ -5,7 +5,7 @@ import { signOut } from "firebase/auth"
 import { LogOut } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { auth } from "@/firebase/config"
+import { getFirebaseAuth } from "@/firebase/config"
 
 export function LogoutButton() {
   const [isPending, setIsPending] = useState(false)
@@ -18,6 +18,8 @@ export function LogoutButton() {
 
     setIsPending(true)
     setHasError(false)
+
+    const auth = await getFirebaseAuth().catch(() => null)
 
     if (auth) {
       try {
