@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --tsconfig tsconfig.test.json --test $(find . -path './node_modules' -prune -o -path './.next' -prune -o -type f \\( -name '*.test.ts' -o -name '*.test.tsx' \\) -print | sort)",
+    "typecheck": "tsc --noEmit",
     "migrate:tenant-entry-dates": "sh -c 'if [ -f .env.local ]; then node --env-file=.env.local scripts/migrate-entry-dates-to-tenants.mjs; else node --env-file=.env scripts/migrate-entry-dates-to-tenants.mjs; fi'"
   },
   "dependencies": {
@@ -37,6 +39,7 @@
     "eslint-config-next": "16.4.2",
     "shadcn": "^4.22.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
