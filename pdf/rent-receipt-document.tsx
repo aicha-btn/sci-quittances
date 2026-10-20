@@ -7,12 +7,8 @@ import {
 } from "@react-pdf/renderer"
 
 import {
-  formatCurrency,
-  formatMonthYear,
-  formatSharedTenantEntryLabel,
-  formatTenantGroup,
-  getPropertyTotal,
-} from "@/lib/format"
+  buildRentReceiptViewModel,
+} from "@/pdf/rent-receipt-data"
 import type { ReceiptPdfData } from "@/types/domain"
 
 const styles = StyleSheet.create({
@@ -119,27 +115,24 @@ const styles = StyleSheet.create({
 })
 
 export function RentReceiptDocument({ data }: { data: ReceiptPdfData }) {
-  const total = getPropertyTotal(data.property)
-  const sharedEntryLabel = formatSharedTenantEntryLabel(data.tenants)
+  const receipt = buildRentReceiptViewModel(data)
 
   return (
-    <Document title={`Quittance ${formatMonthYear(data.month, data.year)}`}>
+    <Document title={receipt.documentTitle}>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View style={styles.companyBlock}>
-            <Text style={styles.companyName}>{data.landlordSettings.companyName}</Text>
-            <Text>{data.landlordSettings.addressLine1}</Text>
-            {data.landlordSettings.addressLine2 ? (
-              <Text>{data.landlordSettings.addressLine2}</Text>
+            <Text style={styles.companyName}>{receipt.landlordName}</Text>
+            <Text>{receipt.landlordAddressLine1}</Text>
+            {receipt.landlordAddressLine2 ? (
+              <Text>{receipt.landlordAddressLine2}</Text>
             ) : null}
-            <Text>
-              {data.landlordSettings.postalCode} {data.landlordSettings.city}
-            </Text>
+            <Text>{receipt.landlordCityLine}</Text>
           </View>
 
           <View style={styles.titleBlock}>
             <Text style={styles.title}>Quittance de loyer</Text>
-            <Text style={styles.subtitle}>{formatMonthYear(data.month, data.year)}</Text>
+            <Text style={styles.subtitle}>{receipt.period}</Text>
           </View>
         </View>
 
@@ -147,26 +140,19 @@ export function RentReceiptDocument({ data }: { data: ReceiptPdfData }) {
           <Text style={styles.sectionTitle}>Informations de location</Text>
           <View style={styles.detailRow}>
             <Text style={styles.label}>Locataire(s)</Text>
-            <Text style={styles.value}>
-              {formatTenantGroup(data.tenants, true)}
-            </Text>
+            <Text style={styles.value}>{receipt.tenantLabel}</Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.label}>Adresse du bien</Text>
-            <Text style={styles.value}>
-              {data.property.residenceName ? `${data.property.residenceName}, ` : ""}
-              {data.property.addressLine1}
-              {data.property.addressLine2 ? `, ${data.property.addressLine2}` : ""}
-              {`, ${data.property.postalCode} ${data.property.city}`}
-            </Text>
+            <Text style={styles.value}>{receipt.propertyAddress}</Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.label}>Entrée dans le bien</Text>
-            <Text style={styles.value}>{sharedEntryLabel}</Text>
+            <Text style={styles.value}>{receipt.entryLabel}</Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.label}>Indice de référence des loyers (IRL)</Text>
-            <Text style={styles.value}>{data.property.technicalReference}</Text>
+            <Text style={styles.value}>{receipt.technicalReference}</Text>
           </View>
         </View>
 
@@ -175,34 +161,34 @@ export function RentReceiptDocument({ data }: { data: ReceiptPdfData }) {
           <Text>
             Le bailleur soussigné reconnaît avoir reçu du ou des locataires
             indiqués ci-dessus le règlement intégral du loyer et des charges
-            pour la période de {formatMonthYear(data.month, data.year)}.
+            pour la période de {receipt.period}.
           </Text>
         </View>
 
         <View style={styles.table}>
           <View style={styles.tableRow}>
             <Text>Loyer</Text>
-            <Text>{formatCurrency(data.property.baseRent)}</Text>
+            <Text>{receipt.rent}</Text>
           </View>
           <View style={styles.tableRow}>
             <Text>Charges</Text>
-            <Text>{formatCurrency(data.property.charges)}</Text>
+            <Text>{receipt.charges}</Text>
           </View>
           <View style={[styles.tableRow, styles.tableRowLast]}>
             <Text style={{ fontWeight: "bold" }}>Total</Text>
-            <Text style={{ fontWeight: "bold" }}>{formatCurrency(total)}</Text>
+            <Text style={{ fontWeight: "bold" }}>{receipt.total}</Text>
           </View>
         </View>
 
         <View style={styles.paymentBox}>
-          <Text>Payé la somme de {formatCurrency(total)}</Text>
+          <Text>Payé la somme de {receipt.total}</Text>
           <Text>Le :</Text>
           <Text>________________________________________________</Text>
           <Text>Par chèque / esp / vrt</Text>
         </View>
 
         <View style={styles.signature}>
-          <Text>{data.landlordSettings.signatureLabel}</Text>
+          <Text>{receipt.signatureLabel}</Text>
           <Text style={styles.signatureLine}> </Text>
         </View>
       </Page>

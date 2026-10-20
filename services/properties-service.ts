@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore"
 
 import { ensureDb, timestampToDate } from "@/services/firestore-helpers"
+import { deletePropertyWithTenants } from "@/services/property-deletion"
 import type { Property, PropertyInput } from "@/types/domain"
 
 function mapProperty(id: string, data: Record<string, unknown>): Property {
@@ -80,18 +81,21 @@ export async function updateProperty(id: string, input: PropertyInput) {
 
 export async function deleteProperty(id: string) {
   const firestore = ensureDb()
-  const tenantsQuery = query(
-    collection(firestore, "tenants"),
-    where("propertyId", "==", id)
-  )
-  const tenantsSnapshot = await getDocs(tenantsQuery)
-  const batch = writeBatch(firestore)
+  await deletePropertyWithTenants(id, {
+    async findTenantReferences(propertyId) {
+      const tenantsQuery = query(
+        collection(firestore, "tenants"),
+        where("propertyId", "==", propertyId)
+      )
+      const tenantsSnapshot = await getDocs(tenantsQuery)
 
-  tenantsSnapshot.forEach((tenantSnapshot) => {
-    batch.delete(tenantSnapshot.ref)
+      return tenantsSnapshot.docs.map((tenantSnapshot) => tenantSnapshot.ref)
+    },
+    getPropertyReference(propertyId) {
+      return doc(firestore, "properties", propertyId)
+    },
+    createBatch() {
+      return writeBatch(firestore)
+    },
   })
-
-  batch.delete(doc(firestore, "properties", id))
-
-  await batch.commit()
 }
