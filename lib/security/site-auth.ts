@@ -4,11 +4,15 @@ import { createHmac, timingSafeEqual } from "node:crypto"
 import { cookies } from "next/headers"
 
 export const SITE_SESSION_COOKIE_NAME = "quittance_site_session"
+export const SITE_SESSION_VERSION = 2 as const
+export const SITE_SESSION_DURATION_MS = 12 * 60 * 60 * 1000
 
-const SESSION_TTL_DAYS = 30
+const SITE_SESSION_CLOCK_TOLERANCE_MS = 60 * 1000
 
 export type SiteSessionPayload = {
+  v: typeof SITE_SESSION_VERSION
   role: "owner"
+  iat: number
   exp: number
 }
 
@@ -55,20 +59,53 @@ function encodePayload(payload: SiteSessionPayload) {
   return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url")
 }
 
-function decodePayload(value: string) {
+function decodePayload(value: string): unknown {
   try {
     const decoded = Buffer.from(value, "base64url").toString("utf8")
-    return JSON.parse(decoded) as SiteSessionPayload
+    return JSON.parse(decoded) as unknown
   } catch {
     return null
   }
 }
 
-export function createSiteSessionToken(
-  expiresAt = Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000
-) {
+function isValidSiteSessionPayload(
+  value: unknown,
+  now: number
+): value is SiteSessionPayload {
+  if (!value || typeof value !== "object") {
+    return false
+  }
+
+  const payload = value as Record<string, unknown>
+  const issuedAt = payload.iat
+  const expiresAt = payload.exp
+
+  if (
+    payload.v !== SITE_SESSION_VERSION ||
+    payload.role !== "owner" ||
+    !Number.isSafeInteger(issuedAt) ||
+    !Number.isSafeInteger(expiresAt)
+  ) {
+    return false
+  }
+
+  const issuedAtMs = issuedAt as number
+  const expiresAtMs = expiresAt as number
+
+  return (
+    issuedAtMs <= now + SITE_SESSION_CLOCK_TOLERANCE_MS &&
+    expiresAtMs > now &&
+    expiresAtMs > issuedAtMs &&
+    expiresAtMs - issuedAtMs <= SITE_SESSION_DURATION_MS
+  )
+}
+
+export function createSiteSessionToken(issuedAt = Date.now()) {
+  const expiresAt = issuedAt + SITE_SESSION_DURATION_MS
   const payload: SiteSessionPayload = {
+    v: SITE_SESSION_VERSION,
     role: "owner",
+    iat: issuedAt,
     exp: expiresAt,
   }
   const encodedPayload = encodePayload(payload)
@@ -112,15 +149,15 @@ export function verifySiteSessionToken(
 
   const payload = decodePayload(encodedPayload)
 
-  if (!payload || payload.role !== "owner" || payload.exp <= now) {
+  if (!isValidSiteSessionPayload(payload, now)) {
     return null
   }
 
   return payload
 }
 
-export function buildSessionCookie() {
-  const { token, expiresAt } = createSiteSessionToken()
+export function buildSessionCookie(issuedAt = Date.now()) {
+  const { token, expiresAt } = createSiteSessionToken(issuedAt)
 
   return {
     name: SITE_SESSION_COOKIE_NAME,
