@@ -25,6 +25,24 @@ Application data is stored in Cloud Firestore. A receipt workflow turns validate
 - Batched cascade deletion of a property and its associated tenants
 - Responsive interface with explicit logout
 
+## Screenshots
+
+All screenshots use fictional demonstration data.
+
+### Rent receipt generation workflow
+
+![Quittentia rent receipt generation interface](docs/screenshots/receipt-generation-desktop.png)
+
+### Responsive property and tenant management
+
+<p align="center">
+  <img src="docs/screenshots/property-tenants-mobile.png" width="320" alt="Quittentia property and tenant management on mobile">
+</p>
+
+### Generated rent receipt preview
+
+![Quittentia generated rent receipt PDF preview](docs/screenshots/receipt-preview.png)
+
 ## Tech stack
 
 - **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS, Radix UI, and shadcn components
